@@ -19,7 +19,7 @@ pub enum EvalAltResult {
     ErrorIfGuardMismatch,
     ErrorVariableNotFound(String),
     ErrorAssignmentToUnknownLHS,
-    ErrorMismatchOutputType(String),
+    ErrorMismatchOutputType(String, Box<dyn Any>),
     ErrorCantOpenScriptFile,
     InternalErrorMalformedDotExpression,
     LoopBreak,
@@ -31,7 +31,7 @@ impl EvalAltResult {
         match *self {
             EvalAltResult::ErrorVariableNotFound(ref s) => Some(s.as_str()),
             EvalAltResult::ErrorFunctionNotFound(ref s) => Some(s.as_str()),
-            EvalAltResult::ErrorMismatchOutputType(ref s) => Some(s.as_str()),
+            EvalAltResult::ErrorMismatchOutputType(ref s, _) => Some(s.as_str()),
             _ => None,
         }
     }
@@ -48,7 +48,7 @@ impl PartialEq for EvalAltResult {
             (&ErrorIfGuardMismatch, &ErrorIfGuardMismatch) => true,
             (&ErrorVariableNotFound(ref a), &ErrorVariableNotFound(ref b)) => a == b,
             (&ErrorAssignmentToUnknownLHS, &ErrorAssignmentToUnknownLHS) => true,
-            (&ErrorMismatchOutputType(ref a), &ErrorMismatchOutputType(ref b)) => a == b,
+            (&ErrorMismatchOutputType(ref a, _), &ErrorMismatchOutputType(ref b, _)) => a == b,
             (&ErrorCantOpenScriptFile, &ErrorCantOpenScriptFile) => true,
             (&InternalErrorMalformedDotExpression, &InternalErrorMalformedDotExpression) => true,
             (&LoopBreak, &LoopBreak) => true,
@@ -68,7 +68,7 @@ impl Error for EvalAltResult {
             EvalAltResult::ErrorAssignmentToUnknownLHS => {
                 "Assignment to an unsupported left-hand side"
             }
-            EvalAltResult::ErrorMismatchOutputType(_) => "Cast of output failed",
+            EvalAltResult::ErrorMismatchOutputType(_, _) => "Cast of output failed",
             EvalAltResult::ErrorCantOpenScriptFile => "Cannot open script file",
             EvalAltResult::InternalErrorMalformedDotExpression => {
                 "[Internal error] Unexpected expression in dot expression"
@@ -153,7 +153,7 @@ impl Engine {
             .and_then(|b| {
                 b.downcast()
                     .map(|b| *b)
-                    .map_err(|a| EvalAltResult::ErrorMismatchOutputType((*a).type_name()))
+                    .map_err(|a| EvalAltResult::ErrorMismatchOutputType((*a).type_name(), a))
             })
     }
 
@@ -677,7 +677,7 @@ impl Engine {
 
                 match x.downcast::<T>() {
                     Ok(out) => Ok(*out),
-                    Err(a) => Err(EvalAltResult::ErrorMismatchOutputType((*a).type_name())),
+                    Err(a) => Err(EvalAltResult::ErrorMismatchOutputType((*a).type_name(), a)),
                 }
             }
             Err(_) => Err(EvalAltResult::ErrorFunctionArgMismatch),
