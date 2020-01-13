@@ -164,12 +164,6 @@ impl Engine {
         ident: String,
         args: Vec<&mut dyn Any>,
     ) -> Result<Box<dyn Any>, EvalAltResult> {
-        debug_println!(
-            "Trying to call function {:?} with args {:?}",
-            ident,
-            args.iter().map(|x| (&**x).type_id()).collect::<Vec<_>>()
-        );
-
         let spec = FnSpec {
             ident: ident.clone(),
             args: Some(
